@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: CampTix Paynow Payment Gateway
+ * Plugin Name: Gateway Camptix Paynow Payment
  * Plugin URI: https://webstudio.co.zw/tag/camptix-paynow/
  * Description: Paynow Payment Gateway for CampTix
  * Author: Tererai Mugova
