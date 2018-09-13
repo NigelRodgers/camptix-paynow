@@ -347,7 +347,7 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         curl_setopt($ch, CURLOPT_HEADER, 0);
         $output = curl_exec($ch);
         if (!$output) {
-            throw new \Exception("Curl Request failed:" . curl_error($ch));
+            throw new \Exception("Remote Request failed:" . curl_error($ch));
         }
         curl_close($ch);
         $result = $this->parseMsg($output);
