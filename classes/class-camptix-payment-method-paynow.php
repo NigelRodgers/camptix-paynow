@@ -1,5 +1,4 @@
 <?php
-
 /**
  * CampTix PayNow Payment Method
  *
@@ -10,22 +9,18 @@
  * @category    Class
  * @author        Tererai Mugova
  */
-
 if (!defined('ABSPATH')) exit; // Exit if accessed directly
-
 class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
 {
     public $id = 'camptix_paynow';
     public $name = 'Paynow';
     public $description = 'CampTix payment methods for Zimbabwe payment gateway Paynow.';
     public $supported_currencies = array('USD');
-
     /**
      * We can have an array to store our options.
      * Use $this->get_payment_options() to retrieve them.
      */
     protected $options = array();
-
     function camptix_init()
     {
         $this->options = array_merge(array(
@@ -33,57 +28,44 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             'merchant_key' => '',
             'sandbox' => false
         ), $this->get_payment_options());
-
         // IPN Listener
         add_action('template_redirect', array($this, 'template_redirect'));
     }
-
     function payment_settings_fields()
     {
         $this->add_settings_field_helper('merchant_id', 'Merchant ID', array($this, 'field_text'));
         $this->add_settings_field_helper('merchant_key', 'Merchant Key', array($this, 'field_text'));
     }
-
     function validate_options($input)
     {
         $output = $this->options;
-
         if (isset($input['merchant_id']))
             $output['merchant_id'] = $input['merchant_id'];
         if (isset($input['merchant_key']))
             $output['merchant_key'] = $input['merchant_key'];
-
         return $output;
     }
-
     function template_redirect()
     {
         if (!isset($_REQUEST['tix_payment_method']) || 'camptix_paynow' != $_REQUEST['tix_payment_method'])
             return;
-
         if (isset($_GET['tix_action'])) {
             if ('payment_cancel' == $_GET['tix_action'])
                 $this->payment_cancel();
-
             if ('payment_return' == $_GET['tix_action'])
                 $this->payment_return();
-
             if ('payment_notify' == $_GET['tix_action'])
                 $this->payment_notify();
         }
     }
-
     function payment_return()
     {
         global $camptix;
-
         $this->log(sprintf('Running payment_return. Request data attached.'), null, $_REQUEST);
         $this->log(sprintf('Running payment_return. Server data attached.'), null, $_SERVER);
-
         $payment_token = (isset($_REQUEST['tix_payment_token'])) ? trim($_REQUEST['tix_payment_token']) : '';
         if (empty($payment_token))
             return;
-
         $attendees = get_posts(
             array(
                 'posts_per_page' => 1,
@@ -99,12 +81,9 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
                 ),
             )
         );
-
         if (empty($attendees))
             return;
-
         $attendee = reset($attendees);
-
         if ('draft' == $attendee->post_status) {
             return $this->payment_result($payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING);
         } else {
@@ -113,13 +92,10 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
                 'tix_action' => 'access_tickets',
                 'tix_access_token' => $access_token,
             ), $camptix->get_tickets_url());
-
             wp_safe_redirect(esc_url_raw($url . '#tix'));
             die();
         }
     }
-
-
     /**
      * Runs when Paynow sends an ITN signal.
      * Verify the payload and use $this->payment_result
@@ -128,12 +104,9 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     function payment_notify()
     {
         global $camptix;
-
         $this->log(sprintf('Running payment_notify. Request data attached.'), null, $_REQUEST);
         $this->log(sprintf('Running payment_notify. Server data attached.'), null, $_SERVER);
-
         $payment_token = (isset($_REQUEST['tix_payment_token'])) ? trim($_REQUEST['tix_payment_token']) : '';
-
         $payload = stripslashes_deep($_POST);
         $data_string = '';
         $data_array = array();
@@ -150,7 +123,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             $pfError = true;
             $this->log(sprintf('ITN request failed, signature mismatch: %s', $payload));
         }
-
         // Verify IPN came from Paynow
         if (!$pfError) {
             switch ($payload['status']) {
@@ -168,36 +140,30 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             $this->payment_result($payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING);
         }
     }
-
     public function payment_checkout($payment_token)
     {
-
         if (!$payment_token || empty($payment_token))
             return false;
-
         if (!in_array($this->camptix_options['currency'], $this->supported_currencies))
             die(__('The selected currency is not supported by this payment method.', 'camptix'));
-
         $return_url = add_query_arg(array(
             'tix_action' => 'payment_return',
             'tix_payment_token' => $payment_token,
             'tix_payment_method' => 'camptix_paynow',
         ), $this->get_tickets_url());
-
         $cancel_url = add_query_arg(array(
             'tix_action' => 'payment_cancel',
             'tix_payment_token' => $payment_token,
             'tix_payment_method' => 'camptix_paynow',
         ), $this->get_tickets_url());
-
         $notify_url = add_query_arg(array(
             'tix_action' => 'payment_notify',
             'tix_payment_token' => $payment_token,
             'tix_payment_method' => 'camptix_paynow',
         ), $this->get_tickets_url());
-
         $order = $this->get_order($payment_token);
-
+        
+        
         $payload = array(
             // Merchant details
             'id' => $this->options['merchant_id'],
@@ -207,6 +173,12 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             'resulturl' => $notify_url,
             "status" => "Message",
         );
+        
+        
+        if(!empty($_POST[tix_attendee_info][1]['email']))
+        {
+            $payload['authemail'] = $_POST[tix_attendee_info][1]['email'];
+        }
         //generate hash
         $string = "";
         foreach ($payload as $key => $value) {
@@ -216,8 +188,34 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         $string .= $integrationkey;
         $hash = hash("sha512", $string);
         $payload['hash'] = strtoupper($hash);
-        $ch = curl_init();
+        // $ch = curl_init();
         $url = "https://www.paynow.co.zw/Interface/InitiateTransaction";
+        $remote_response = wp_remote_post($url, array(
+        	'method' => 'POST',
+        	'headers' => array(),
+        	'body' => $payload
+        ));
+        
+        if ( is_wp_error( $remote_response ) ) {
+           $error_message = $remote_response->get_error_message();
+           throw new \Exception("Curl Request failed:" . $error_message);
+            $this->log(sprintf("Curl Request failed:" . $error_message . ': %s', null, $payload));
+        } else {
+           $parts = explode("&", $remote_response['body']);
+            $result = array();
+            foreach ($parts as $i => $value) {
+                $bits = explode("=", $value, 2);
+                $result[$bits[0]] = urldecode($bits[1]);
+            }
+            
+            if ($result['status'] == 'Ok') {
+                header('Location:' . $result['browserurl']);
+            } else {
+                throw new \Exception("Result returned: Error occurred");
+                $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, $payload));
+            }
+        }
+        /*
         // 2. set the options, including the url
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_POST, 1);
@@ -245,9 +243,9 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             throw new \Exception("Curl Request failed:" . curl_error($ch));
             $this->log(sprintf("Curl Request failed:" . curl_error($ch) . ': %s', null, $payload));
         }
+        */
         return;
     }
-
     /**
      * Runs when the user cancels their payment during checkout at PayPal.
      * his will simply tell CampTix to put the created attendee drafts into to Cancelled state.
@@ -255,18 +253,14 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     function payment_cancel()
     {
         global $camptix;
-
         $this->log(sprintf('Running payment_cancel. Request data attached.'), null, $_REQUEST);
         $this->log(sprintf('Running payment_cancel. Server data attached.'), null, $_SERVER);
-
         $payment_token = (isset($_REQUEST['tix_payment_token'])) ? trim($_REQUEST['tix_payment_token']) : '';
-
         if (!$payment_token)
             die('empty token');
         // Set the associated attendees to cancelled.
         return $this->payment_result($payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELLED);
     }
-
     function createHash($values)
     {
         $string = "";
@@ -279,7 +273,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         $hash = hash("sha512", $string);
         return strtoupper($hash);
     }
-
     function urlIfy($fields)
     {
         //url-ify the data for the POST
@@ -289,10 +282,8 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             $fields_string .= $delim . $key . '=' . $value;
             $delim = "&";
         }
-
         return $fields_string;
     }
-
     function createMsg($values)
     {
         $fields = array();
@@ -303,7 +294,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         $fields_string = $this->urlIfy($fields);
         return $fields_string;
     }
-
     function parseMsg($msg)
     {
         //convert to array data
@@ -315,7 +305,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         }
         return $result;
     }
-
     function isValidInitResponse($response)
     {
         if ($this->createHash($response) != $response["hash"]) {
@@ -324,7 +313,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             return true;
         }
     }
-
     function isValidPollResponse($response)
     {
         if ($this->createHash($response) != $response["hash"]) {
@@ -333,12 +321,20 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             return true;
         }
     }
-
     function pollTransaction($poll_url)
     {
         if (empty($poll_url)) {
             throw new \Exception("Poll url should not be empty");
         }
+        
+        $remote_response = wp_remote_post($poll_url, array(
+        	'method' => 'POST'
+        ));
+        
+        if ( is_wp_error( $remote_response ) ) {
+            throw new \Exception("Remote Request failed:" . $remote_response->get_error_message());
+        }
+        /*
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $poll_url);
         curl_setopt($ch, CURLOPT_POST, 1);
@@ -350,11 +346,11 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             throw new \Exception("Remote Request failed:" . curl_error($ch));
         }
         curl_close($ch);
+        
         $result = $this->parseMsg($output);
+        */
+        $result = $this->parseMsg($remote_response['body']);
         return $result;
-
-
     }
 }
-
 ?>
