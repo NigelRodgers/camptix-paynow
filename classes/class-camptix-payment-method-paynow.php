@@ -188,7 +188,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         $string .= $integrationkey;
         $hash = hash("sha512", $string);
         $payload['hash'] = strtoupper($hash);
-        // $ch = curl_init();
         $url = "https://www.paynow.co.zw/Interface/InitiateTransaction";
         $remote_response = wp_remote_post($url, array(
         	'method' => 'POST',
@@ -198,8 +197,8 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         
         if ( is_wp_error( $remote_response ) ) {
            $error_message = $remote_response->get_error_message();
-           throw new \Exception("Curl Request failed:" . $error_message);
-            $this->log(sprintf("Curl Request failed:" . $error_message . ': %s', null, $payload));
+           throw new \Exception("Remote Request failed:" . $error_message);
+            $this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, $payload));
         } else {
            $parts = explode("&", $remote_response['body']);
             $result = array();
@@ -215,35 +214,7 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
                 $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, $payload));
             }
         }
-        /*
-        // 2. set the options, including the url
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-// 3. execute and fetch the resulting HTML output
-        $output = curl_exec($ch);
-        if ($output) {
-            $parts = explode("&", $output);
-            $result = array();
-            foreach ($parts as $i => $value) {
-                $bits = explode("=", $value, 2);
-                $result[$bits[0]] = urldecode($bits[1]);
-            }
-            curl_close($ch);
-            //print_r($result);
-            if ($result['status'] == 'Ok') {
-                header('Location:' . $result['browserurl']);
-            } else {
-                throw new \Exception("Curl Request failed:" . curl_error($ch));
-                $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, $payload));
-            }
-        } else {
-            throw new \Exception("Curl Request failed:" . curl_error($ch));
-            $this->log(sprintf("Curl Request failed:" . curl_error($ch) . ': %s', null, $payload));
-        }
-        */
+        
         return;
     }
     /**
@@ -334,21 +305,7 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         if ( is_wp_error( $remote_response ) ) {
             throw new \Exception("Remote Request failed:" . $remote_response->get_error_message());
         }
-        /*
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $poll_url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, false);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        $output = curl_exec($ch);
-        if (!$output) {
-            throw new \Exception("Remote Request failed:" . curl_error($ch));
-        }
-        curl_close($ch);
         
-        $result = $this->parseMsg($output);
-        */
         $result = $this->parseMsg($remote_response['body']);
         return $result;
     }
