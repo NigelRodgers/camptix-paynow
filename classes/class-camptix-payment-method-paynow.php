@@ -61,8 +61,9 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     function payment_return()
     {
         global $camptix;
-        $this->log(sprintf('Running payment_return. Request data attached.'), null, $_REQUEST);
-        $this->log(sprintf('Running payment_return. Server data attached.'), null, $_SERVER);
+        $this->log(sprintf('Running payment_return.'), null, "payment_return");
+        //$this->log(sprintf('Running payment_return. Request data attached.'), null, $_REQUEST);
+        //$this->log(sprintf('Running payment_return. Server data attached.'), null, $_SERVER);
         $payment_token = (isset($_REQUEST['tix_payment_token'])) ? trim($_REQUEST['tix_payment_token']) : '';
         if (empty($payment_token))
             return;
@@ -104,8 +105,9 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     function payment_notify()
     {
         global $camptix;
-        $this->log(sprintf('Running payment_notify. Request data attached.'), null, $_REQUEST);
-        $this->log(sprintf('Running payment_notify. Server data attached.'), null, $_SERVER);
+        $this->log(sprintf('Running payment_notify. Request data attached.'), null, "payment_notify");
+//        $this->log(sprintf('Running payment_notify. Request data attached.'), null, $_REQUEST);
+//        $this->log(sprintf('Running payment_notify. Server data attached.'), null, $_SERVER);
         $payment_token = (isset($_REQUEST['tix_payment_token'])) ? trim($_REQUEST['tix_payment_token']) : '';
         $payload = stripslashes_deep($_POST);
         $data_string = '';
@@ -121,7 +123,8 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         $pfError = false;
         if (0 != strcmp($hash, $payload['hash'])) {
             $pfError = true;
-            $this->log(sprintf('ITN request failed, signature mismatch: %s', $payload));
+//            $this->log(sprintf('ITN request failed, signature mismatch: %s', $payload));
+            $this->log(sprintf('ITN request failed, signature mismatch: %s', $payload['hash']));
         }
         // Verify IPN came from Paynow
         if (!$pfError) {
@@ -173,11 +176,10 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             'resulturl' => $notify_url,
             "status" => "Message",
         );
-        
-        
-        if(!empty($_POST[tix_attendee_info][1]['email']))
+
+        if(!empty($_POST["tix_attendee_info"][1]['email']))
         {
-            $payload['authemail'] = $_POST[tix_attendee_info][1]['email'];
+            $payload['authemail'] = $_POST["tix_attendee_info"][1]['email'];
         }
         //generate hash
         $string = "";
@@ -198,7 +200,8 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         if ( is_wp_error( $remote_response ) ) {
            $error_message = $remote_response->get_error_message();
            throw new \Exception("Remote Request failed:" . $error_message);
-            $this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, $payload));
+            //$this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, $payload));
+            $this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, "failed_request"));
         } else {
            $parts = explode("&", $remote_response['body']);
             $result = array();
@@ -211,7 +214,8 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
                 header('Location:' . $result['browserurl']);
             } else {
                 throw new \Exception("Result returned: Error occurred");
-                $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, $payload));
+//                $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, $payload));
+                $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, "paynow_initial_error"));
             }
         }
         
@@ -224,8 +228,8 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     function payment_cancel()
     {
         global $camptix;
-        $this->log(sprintf('Running payment_cancel. Request data attached.'), null, $_REQUEST);
-        $this->log(sprintf('Running payment_cancel. Server data attached.'), null, $_SERVER);
+        $this->log(sprintf('Running payment_cancel.'), null, "payment_cancel");
+        //$this->log(sprintf('Running payment_cancel. Server data attached.'), null, $_SERVER);
         $payment_token = (isset($_REQUEST['tix_payment_token'])) ? trim($_REQUEST['tix_payment_token']) : '';
         if (!$payment_token)
             die('empty token');
