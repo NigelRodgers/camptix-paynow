@@ -62,8 +62,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     {
         global $camptix;
         $this->log(sprintf('Running payment_return.'), null, "payment_return");
-        //$this->log(sprintf('Running payment_return. Request data attached.'), null, $_REQUEST);
-        //$this->log(sprintf('Running payment_return. Server data attached.'), null, $_SERVER);
         $payment_token = (isset($_REQUEST['tix_payment_token'])) ? trim($_REQUEST['tix_payment_token']) : '';
         if (empty($payment_token))
             return;
@@ -106,8 +104,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     {
         global $camptix;
         $this->log(sprintf('Running payment_notify. Request data attached.'), null, "payment_notify");
-//        $this->log(sprintf('Running payment_notify. Request data attached.'), null, $_REQUEST);
-//        $this->log(sprintf('Running payment_notify. Server data attached.'), null, $_SERVER);
         $payment_token = (isset($_REQUEST['tix_payment_token'])) ? trim($_REQUEST['tix_payment_token']) : '';
         $payload = stripslashes_deep($_POST);
         $data_string = '';
@@ -123,7 +119,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         $pfError = false;
         if (0 != strcmp($hash, $payload['hash'])) {
             $pfError = true;
-//            $this->log(sprintf('ITN request failed, signature mismatch: %s', $payload));
             $this->log(sprintf('ITN request failed, signature mismatch: %s', $payload['hash']));
         }
         // Verify IPN came from Paynow
@@ -200,11 +195,8 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         if ( is_wp_error( $remote_response ) ) {
            $error_message = $remote_response->get_error_message();
 
-           //throw new \Exception("Remote Request failed:" . $error_message);
-            //$this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, $payload));
-
-            $this->displayMessage("There was a problem connecting to the PayNow Gateway. Please try again later. If the problem persists please contact the website admin. /nDetails:/n" . $error_message");
             $this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, "failed_remote_request"));
+            return $this->payment_result($payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED);
 
         } else {
            $parts = explode("&", $remote_response['body']);
@@ -217,11 +209,7 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             if ($result['status'] == 'Ok') {
                 header('Location:' . $result['browserurl']);
             } else {
-                //throw new \Exception("Result returned: Error occurred");
-//                $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, $payload));
-
-                $this->displayMessage("Failed to process transaction please try again later");
-                $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, "paynow_result_returned_error"));
+                return $this->payment_result($payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED);
             }
         }
         
@@ -235,7 +223,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     {
         global $camptix;
         $this->log(sprintf('Running payment_cancel.'), null, "payment_cancel");
-        //$this->log(sprintf('Running payment_cancel. Server data attached.'), null, $_SERVER);
         $payment_token = (isset($_REQUEST['tix_payment_token'])) ? trim($_REQUEST['tix_payment_token']) : '';
         if (!$payment_token)
             die('empty token');
@@ -305,9 +292,8 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     function pollTransaction($poll_url)
     {
         if (empty($poll_url)) {
-            //throw new \Exception("Poll url should not be empty");
-            $this->displayMessage("Failed to process transaction please try again later");
             $this->log(sprintf("Poll url should not be empty" . ': %s', null, "paynow_poll_error"));
+            return $this->payment_result($payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED);
         }
         
         $remote_response = wp_remote_post($poll_url, array(
@@ -315,8 +301,7 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         ));
         
         if ( is_wp_error( $remote_response ) ) {
-            //throw new \Exception("Remote Request failed:" . $remote_response->get_error_message());
-            $this->displayMessage("Remote Request failed. Please try again later");
+            return $this->payment_result($payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED);
         }
         
         $result = $this->parseMsg($remote_response['body']);
