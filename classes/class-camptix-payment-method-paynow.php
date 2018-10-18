@@ -199,11 +199,13 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         
         if ( is_wp_error( $remote_response ) ) {
            $error_message = $remote_response->get_error_message();
+
            //throw new \Exception("Remote Request failed:" . $error_message);
             //$this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, $payload));
 
-            $this->displayMessage("Failed to process transaction please try again later");
+            $this->displayMessage("There was a problem connecting to the PayNow Gateway. Please try again later. If the problem persists please contact the website admin. /nDetails:/n" . $error_message");
             $this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, "failed_remote_request"));
+
         } else {
            $parts = explode("&", $remote_response['body']);
             $result = array();
