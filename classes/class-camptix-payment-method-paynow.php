@@ -199,9 +199,13 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         
         if ( is_wp_error( $remote_response ) ) {
            $error_message = $remote_response->get_error_message();
-           $this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, "failed_request"));
-           throw new \Exception("There was a problem connecting to the PayNow Gateway. Please try again later. If the problem persists please contact the website admin. /nDetails:/n" . $error_message);
+
+           //throw new \Exception("Remote Request failed:" . $error_message);
             //$this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, $payload));
+
+            $this->displayMessage("There was a problem connecting to the PayNow Gateway. Please try again later. If the problem persists please contact the website admin. /nDetails:/n" . $error_message");
+            $this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, "failed_remote_request"));
+
         } else {
            $parts = explode("&", $remote_response['body']);
             $result = array();
@@ -213,9 +217,11 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             if ($result['status'] == 'Ok') {
                 header('Location:' . $result['browserurl']);
             } else {
-                throw new \Exception("Result returned: Error occurred");
+                //throw new \Exception("Result returned: Error occurred");
 //                $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, $payload));
-                $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, "paynow_initial_error"));
+
+                $this->displayMessage("Failed to process transaction please try again later");
+                $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, "paynow_result_returned_error"));
             }
         }
         
@@ -299,7 +305,9 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     function pollTransaction($poll_url)
     {
         if (empty($poll_url)) {
-            throw new \Exception("Poll url should not be empty");
+            //throw new \Exception("Poll url should not be empty");
+            $this->displayMessage("Failed to process transaction please try again later");
+            $this->log(sprintf("Poll url should not be empty" . ': %s', null, "paynow_poll_error"));
         }
         
         $remote_response = wp_remote_post($poll_url, array(
@@ -307,11 +315,109 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         ));
         
         if ( is_wp_error( $remote_response ) ) {
-            throw new \Exception("Remote Request failed:" . $remote_response->get_error_message());
+            //throw new \Exception("Remote Request failed:" . $remote_response->get_error_message());
+            $this->displayMessage("Remote Request failed. Please try again later");
         }
         
         $result = $this->parseMsg($remote_response['body']);
         return $result;
+    }
+    function displayMessage($message){
+        ?>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+                /*body {font-family: Arial, Helvetica, sans-serif;}*/
+
+                /* The Modal (background) */
+                .modal {
+                    display: block; /* Hidden by default */
+                    position: fixed; /* Stay in place */
+                    z-index: 1; /* Sit on top */
+                    padding-top: 300px; /* Location of the box */
+                    left: 0;
+                    top: 0;
+                    width: 100%; /* Full width */
+                    height: 100%; /* Full height */
+                    overflow: auto; /* Enable scroll if needed */
+                    background-color: rgb(0,0,0); /* Fallback color */
+                    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+                }
+
+                /* Modal Content */
+                .modal-content {
+                    background-color: #fefefe;
+                    margin: auto;
+                    padding: 20px;
+                    border: 1px solid #888;
+                    width: 80%;
+                }
+
+                /* The Close Button */
+                .close {
+                    color: #aaaaaa;
+                    float: right;
+                    font-size: 28px;
+                    font-weight: bold;
+                }
+
+                .close:hover,
+                .close:focus {
+                    color: #000;
+                    text-decoration: none;
+                    cursor: pointer;
+                }
+            </style>
+        </head>
+        <body>
+
+<!--        <h2>Error message</h2>-->
+
+        <!-- Trigger/Open The Modal -->
+<!--        <button id="myBtn">Open Modal</button>-->
+
+        <!-- The Modal -->
+        <div id="myModal" class="modal">
+
+            <!-- Modal content -->
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <p><?php echo $message ?></p>
+            </div>
+
+        </div>
+
+        <script>
+            // Get the modal
+            var modal = document.getElementById('myModal');
+
+            // Get the button that opens the modal
+            //var btn = document.getElementById("myBtn");
+
+            // Get the <span> element that closes the modal
+            var span = document.getElementsByClassName("close")[0];
+
+            // When the user clicks the button, open the modal
+//            btn.onclick = function() {
+//                modal.style.display = "block";
+//            }
+
+            // When the user clicks on <span> (x), close the modal
+            span.onclick = function() {
+                modal.style.display = "none";
+            }
+
+            // When the user clicks anywhere outside of the modal, close it
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+        </script>
+
+        </body>
+
+        <?php
     }
 }
 ?>
