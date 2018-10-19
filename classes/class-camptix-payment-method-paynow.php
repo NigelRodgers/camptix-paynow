@@ -62,8 +62,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     {
         global $camptix;
         $this->log(sprintf('Running payment_return.'), null, "payment_return");
-        //$this->log(sprintf('Running payment_return. Request data attached.'), null, $_REQUEST);
-        //$this->log(sprintf('Running payment_return. Server data attached.'), null, $_SERVER);
         $payment_token = (isset($_REQUEST['tix_payment_token'])) ? trim($_REQUEST['tix_payment_token']) : '';
         if (empty($payment_token))
             return;
@@ -106,8 +104,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     {
         global $camptix;
         $this->log(sprintf('Running payment_notify. Request data attached.'), null, "payment_notify");
-//        $this->log(sprintf('Running payment_notify. Request data attached.'), null, $_REQUEST);
-//        $this->log(sprintf('Running payment_notify. Server data attached.'), null, $_SERVER);
         $payment_token = (isset($_REQUEST['tix_payment_token'])) ? trim($_REQUEST['tix_payment_token']) : '';
         $payload = stripslashes_deep($_POST);
         $data_string = '';
@@ -123,7 +119,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         $pfError = false;
         if (0 != strcmp($hash, $payload['hash'])) {
             $pfError = true;
-//            $this->log(sprintf('ITN request failed, signature mismatch: %s', $payload));
             $this->log(sprintf('ITN request failed, signature mismatch: %s', $payload['hash']));
         }
         // Verify IPN came from Paynow
@@ -165,8 +160,8 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             'tix_payment_method' => 'camptix_paynow',
         ), $this->get_tickets_url());
         $order = $this->get_order($payment_token);
-        
-        
+
+
         $payload = array(
             // Merchant details
             'id' => $this->options['merchant_id'],
@@ -192,40 +187,33 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
         $payload['hash'] = strtoupper($hash);
         $url = "https://www.paynow.co.zw/Interface/InitiateTransaction";
         $remote_response = wp_remote_post($url, array(
-        	'method' => 'POST',
-        	'headers' => array(),
-        	'body' => $payload
+            'method' => 'POST',
+            'headers' => array(),
+            'body' => $payload
         ));
-        
-        if ( is_wp_error( $remote_response ) ) {
-           $error_message = $remote_response->get_error_message();
-           //throw new \Exception("Remote Request failed:" . $error_message);
-            //$this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, $payload));
 
-            $this->displayMessage("Failed to process transaction please try again later");
+        if ( is_wp_error( $remote_response ) ) {
+            $error_message = $remote_response->get_error_message();
+
             $this->log(sprintf("Remote Request failed:" . $error_message . ': %s', null, "failed_remote_request"));
-            return CampTix_Plugin::PAYMENT_STATUS_FAILED;
+            return $this->payment_result($payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED);
+
         } else {
-           $parts = explode("&", $remote_response['body']);
+            $parts = explode("&", $remote_response['body']);
             $result = array();
             foreach ($parts as $i => $value) {
                 $bits = explode("=", $value, 2);
                 $result[$bits[0]] = urldecode($bits[1]);
             }
-            
+
             if ($result['status'] == 'Ok') {
                 header('Location:' . $result['browserurl']);
             } else {
-                //throw new \Exception("Result returned: Error occurred");
-//                $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, $payload));
-
-                $this->displayMessage("Failed to process transaction please try again later");
-                $this->log(sprintf("Paynow returned an error:" . $result["error"] . ': %s', null, "paynow_result_returned_error"));
-                return CampTix_Plugin::PAYMENT_STATUS_FAILED;
+                return $this->payment_result($payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED);
             }
         }
-        
-        return CampTix_Plugin::PAYMENT_STATUS_COMPLETED;
+
+        return $this->payment_result($payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING);
     }
     /**
      * Runs when the user cancels their payment during checkout at PayPal.
@@ -235,7 +223,6 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
     {
         global $camptix;
         $this->log(sprintf('Running payment_cancel.'), null, "payment_cancel");
-        //$this->log(sprintf('Running payment_cancel. Server data attached.'), null, $_SERVER);
         $payment_token = (isset($_REQUEST['tix_payment_token'])) ? trim($_REQUEST['tix_payment_token']) : '';
         if (!$payment_token)
             die('empty token');
@@ -302,122 +289,23 @@ class CampTix_Payment_Method_Paynow extends CampTix_Payment_Method
             return true;
         }
     }
-    function pollTransaction($poll_url)
+    function pollTransaction($payment_token, $poll_url)
     {
         if (empty($poll_url)) {
-            //throw new \Exception("Poll url should not be empty");
-            $this->displayMessage("Failed to process transaction please try again later");
             $this->log(sprintf("Poll url should not be empty" . ': %s', null, "paynow_poll_error"));
+            return $this->payment_result($payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED);
         }
-        
+
         $remote_response = wp_remote_post($poll_url, array(
-        	'method' => 'POST'
+            'method' => 'POST'
         ));
-        
+
         if ( is_wp_error( $remote_response ) ) {
-            //throw new \Exception("Remote Request failed:" . $remote_response->get_error_message());
-            $this->displayMessage("Remote Request failed. Please try again later");
+            return $this->payment_result($payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED);
         }
-        
+
         $result = $this->parseMsg($remote_response['body']);
         return $result;
-    }
-    function displayMessage($message){
-        ?>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <style>
-                /*body {font-family: Arial, Helvetica, sans-serif;}*/
-
-                /* The Modal (background) */
-                .modal {
-                    display: block; /* Hidden by default */
-                    position: fixed; /* Stay in place */
-                    z-index: 1; /* Sit on top */
-                    padding-top: 300px; /* Location of the box */
-                    left: 0;
-                    top: 0;
-                    width: 100%; /* Full width */
-                    height: 100%; /* Full height */
-                    overflow: auto; /* Enable scroll if needed */
-                    background-color: rgb(0,0,0); /* Fallback color */
-                    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-                }
-
-                /* Modal Content */
-                .modal-content {
-                    background-color: #fefefe;
-                    margin: auto;
-                    padding: 20px;
-                    border: 1px solid #888;
-                    width: 80%;
-                }
-
-                /* The Close Button */
-                .close {
-                    color: #aaaaaa;
-                    float: right;
-                    font-size: 28px;
-                    font-weight: bold;
-                }
-
-                .close:hover,
-                .close:focus {
-                    color: #000;
-                    text-decoration: none;
-                    cursor: pointer;
-                }
-            </style>
-        </head>
-        <body>
-
-<!--        <h2>Error message</h2>-->
-
-        <!-- Trigger/Open The Modal -->
-<!--        <button id="myBtn">Open Modal</button>-->
-
-        <!-- The Modal -->
-        <div id="myModal" class="modal">
-
-            <!-- Modal content -->
-            <div class="modal-content">
-                <span class="close">&times;</span>
-                <p><?php echo $message ?></p>
-            </div>
-
-        </div>
-
-        <script>
-            // Get the modal
-            var modal = document.getElementById('myModal');
-
-            // Get the button that opens the modal
-            //var btn = document.getElementById("myBtn");
-
-            // Get the <span> element that closes the modal
-            var span = document.getElementsByClassName("close")[0];
-
-            // When the user clicks the button, open the modal
-//            btn.onclick = function() {
-//                modal.style.display = "block";
-//            }
-
-            // When the user clicks on <span> (x), close the modal
-            span.onclick = function() {
-                modal.style.display = "none";
-            }
-
-            // When the user clicks anywhere outside of the modal, close it
-            window.onclick = function(event) {
-                if (event.target == modal) {
-                    modal.style.display = "none";
-                }
-            }
-        </script>
-
-        </body>
-
-        <?php
     }
 }
 ?>
