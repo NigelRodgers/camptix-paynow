@@ -3,9 +3,9 @@
  * Plugin Name: Gateway Camptix Paynow Payment
  * Plugin URI: https://webstudio.co.zw/tag/camptix-paynow/
  * Description: Paynow Payment Gateway for CampTix
- * Author: Tererai Mugova, Leo Moyo, Nigel Rodgers
+ * Author: Tererai Mugova, Leo Moyo, PayNow Zimbabwe, Nigel Rodgers
  * Author URI: http://webstudio.co.zw/
- * Version: 1.0.2
+ * Version: 1.0.3
  * License: GPLv2 or later
  */
 

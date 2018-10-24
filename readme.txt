@@ -4,7 +4,7 @@ Donate link: http://webstudio.co.zw/donate/
 Tags: camptix, paynow
 Requires at least: 3.5
 Tested up to: 4.9.8
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Paynow Payment Gateway for CampTix plugin
 
 == Description ==
 
-Zimbabwe Paynow Payment Gateway for the CampTix plugin.
+Unofficial Zimbabwe Paynow Payment Gateway for the CampTix plugin.
 
 Take payments using Ecocash, Telecash, Zimswitch through Paynow using the CampTix plugin. CampTix plugin needs to be installed and activated for the Paynow payment gateway to work.
 
